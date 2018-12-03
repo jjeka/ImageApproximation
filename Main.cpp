@@ -310,7 +310,7 @@ CImage CImage::floydSteinbergDithering(bool f_alternation)
 			{
 				int xc = x + (fromLeft ? dx : -dx);
 				int yc = y + dy;
-				if (xc >= 0 && xc < m_width && yc >= 0 && yc < m_height)
+				if (xc >= 0 && xc < int(m_width) && yc >= 0 && yc < int(m_height))
 				{
 					img.at(xc, yc) = MAX(0, MIN(int(img.at(xc, yc)) + correction * coef / 16, 255));
 				}
@@ -326,17 +326,104 @@ CImage CImage::floydSteinbergDithering(bool f_alternation)
 	return img;
 }
 
+void printUsage(const char* f_name)
+{
+	printf("Usage:\n"
+		"%s src_pgm_file dst_pgm_file conversion_type [options]\n"
+		"conversion type and options:\n"
+		"thresholding middle_value (from 0 to 255)\n"
+		"random_dithering\n"
+		"ordered_dithreing map_size (2,4,8,16,32)\n"
+		"error_diffusion alternation (0/1)\n"
+		"floyd_steinberg_dithering alternation (0/1)\n", f_name);
+}
+
 int main(int f_argc, const char* f_argv[])
 {
+	if (f_argc != 4 && f_argc != 5)
+	{
+		printUsage(f_argv[0]);
+		return 1;
+	}
+
 	try
 	{
-		CImage img("baboon.ascii.pgm");
+		CImage img(f_argv[1]);
+		const char* dst = f_argv[2];
+		const char* type = f_argv[3];
+		const char* arg = f_argv[4];
 
-		img.floydSteinbergDithering(true).save("new_image.pgm");
+		if (!strcmp(type, "thresholding"))
+		{
+			unsigned val;
+			if (f_argc != 5 || sscanf(arg, " %u ", &val) != 1 || val > 255)
+			{
+				printUsage(f_argv[0]);
+				return 1;
+			}
+			img.thresholding(val).save(dst);
+		}
+		else if (!strcmp(type, "random_dithering"))
+		{
+			if (f_argc != 4)
+			{
+				printUsage(f_argv[0]);
+				return 1;
+			}
+			img.randomDithering().save(dst);
+		}
+		else if (!strcmp(type, "ordered_dithreing"))
+		{
+			unsigned val;
+			if (f_argc != 5 || sscanf(arg, " %u ", &val) != 1
+				|| (val != 2 && val != 4 && val != 8 && val != 16 && val != 32))
+			{
+				printUsage(f_argv[0]);
+				return 1;
+			}
+			if (val == 2)
+				val = 1;
+			else if (val == 4)
+				val = 2;
+			else if (val == 8)
+				val = 3;
+			else if (val == 16)
+				val = 4;
+			else
+				val = 5;
+
+			img.orderedDithering(val).save(dst);
+		}
+		else if (!strcmp(type, "error_diffusion"))
+		{
+			unsigned val;
+			if (f_argc != 5 || sscanf(arg, " %u ", &val) != 1 || val > 1)
+			{
+				printUsage(f_argv[0]);
+				return 1;
+			}
+			img.errorDiffusion(val).save(dst);
+		}
+		else if (!strcmp(type, "floyd_steinberg_dithering"))
+		{
+			unsigned val;
+			if (f_argc != 5 || sscanf(arg, " %u ", &val) != 1 || val > 1)
+			{
+				printUsage(f_argv[0]);
+				return 1;
+			}
+			img.floydSteinbergDithering(val).save(dst);
+		}
+		else
+		{
+			printUsage(f_argv[0]);
+			return 1;
+		}
 	}
 	catch (const char* f_error)
 	{
 		printf("ERROR: %s", f_error);
+		return 1;
 	}
 	return 0;
 }
